@@ -1,0 +1,53 @@
+workflows:
+  flutter-workflow:
+    name: Build Flutter Android & iOS
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      android_signing:
+        - keystore_reference
+      vars:
+        APP_STORE_CONNECT_ISSUER_ID: Encrypted(APP_STORE_ISSUER_ID)
+        APP_STORE_CONNECT_KEY_IDENTIFIER: Encrypted(APP_STORE_KEY_ID)
+        APP_STORE_CONNECT_PRIVATE_KEY: Encrypted(APP_STORE_PRIVATE_KEY)
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Build Android APK
+        script: flutter build apk --release
+
+      - name: Build iOS IPA
+        script: flutter build ipa --release --no-codesign
+
+      - name: Automatic iOS Code Signing
+        script: |
+          xcode-project use-profiles \
+          --issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
+          --key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+          --private-key="$APP_STORE_CONNECT_PRIVATE_KEY"
+
+      - name: Export signed IPA
+        script: |
+          xcodebuild -exportArchive \
+          -archivePath build/ios/archive/MyApp.xcarchive \
+          -exportPath build/ipa \
+          -exportOptionsPlist exportOptions.plist
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/ipa/*.ipa
+      - build/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - your_email@example.com
+
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        beta_groups:
+          - Public
