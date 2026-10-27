@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "812581723084",
+    "project_id": "elevatorquotationapp",
+    "storage_bucket": "elevatorquotationapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812581723084:android:c31e8fa87acfda7cff5b69",
+        "android_client_info": {
+          "package_name": "com.example.elevator_quotation_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "812581723084-ibr1n1ss0inl2o4253rj1ukaskhj8b3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV4lVJ348FgoIppqrkSY36JFuBkjZhmIM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "812581723084-ibr1n1ss0inl2o4253rj1ukaskhj8b3t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "812581723084-db77j2hiqa7j13f55uau5sqpvcf4ti9g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quotationApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812581723084:android:dd92519faa64a235ff5b69",
+        "android_client_info": {
+          "package_name": "com.mahajan.elevatorquotation.cloud"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "812581723084-ibr1n1ss0inl2o4253rj1ukaskhj8b3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV4lVJ348FgoIppqrkSY36JFuBkjZhmIM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "812581723084-ibr1n1ss0inl2o4253rj1ukaskhj8b3t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "812581723084-db77j2hiqa7j13f55uau5sqpvcf4ti9g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quotationApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

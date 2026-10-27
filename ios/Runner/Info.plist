@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of lift inspection points for service reports.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach inspection photos to lift service reports.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Use the microphone to dictate service report remarks.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Convert spoken English or Hindi into service report remarks.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

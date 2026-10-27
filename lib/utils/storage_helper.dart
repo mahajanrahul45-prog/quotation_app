@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../storage/cloud_preferences.dart';
 
 class StorageHelper {
   static const String _keyQuotations = 'saved_quotations';
@@ -7,7 +7,7 @@ class StorageHelper {
 
   /// Save or update quotation
   static Future<void> saveQuotation(Map<String, dynamic> quotation) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CloudPreferences.getInstance();
     List<String> saved = prefs.getStringList(_keyQuotations) ?? [];
 
     // if existing quotation number found, update instead of adding
@@ -27,26 +27,26 @@ class StorageHelper {
 
   /// Get all saved quotations
   static Future<List<Map<String, dynamic>>> getQuotations() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CloudPreferences.getInstance();
     List<String> saved = prefs.getStringList(_keyQuotations) ?? [];
     return saved.map((q) => jsonDecode(q) as Map<String, dynamic>).toList();
   }
 
   /// Save logo path
   static Future<void> saveLogoPath(String path) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CloudPreferences.getInstance();
     await prefs.setString(_keyLogoPath, path);
   }
 
   /// Get logo path
   static Future<String?> getLogoPath() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CloudPreferences.getInstance();
     return prefs.getString(_keyLogoPath);
   }
 
   /// Remove logo
   static Future<void> removeLogo() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CloudPreferences.getInstance();
     await prefs.remove(_keyLogoPath);
   }
 }

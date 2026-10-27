@@ -1,3 +1,6 @@
+import '../auth/account_session.dart';
+import '../widgets/access_denied.dart';
+import '../widgets/app_scaffold.dart';
 import 'package:flutter/material.dart';
 
 class AddProductPage extends StatelessWidget {
@@ -5,7 +8,8 @@ class AddProductPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    if (!AccountSession.instance.can('products')) return const AccessDenied();
+    return AppScaffold(
       appBar: AppBar(title: const Text('Add Product')),
       body: const Center(child: Text('Add Product Page Coming Soon...')),
     );

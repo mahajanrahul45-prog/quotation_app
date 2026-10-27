@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase local test dependencies and credentials
+**/node_modules/
+.firebase/
+*service-account*.json
+
+# PDF inspection/rendering tools and intermediate previews
+/tmp/pdf_tools/
+/tmp/pdfs/

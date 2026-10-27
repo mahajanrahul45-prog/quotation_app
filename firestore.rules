@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data; }
+    function master() { return signedIn() && me().enabled == true && me().role == 'master'; }
+    function manages(uid) { return master() && (uid == request.auth.uid || get(/databases/$(database)/documents/accounts/$(uid)).data.masterUid == request.auth.uid); }
+    function allowed(uid, feature) {
+      return manages(uid) || (signedIn() && request.auth.uid == uid && me().enabled == true && me().role == 'user' && me().permissions[feature] == true);
+    }
+    // Document users may read their own common directory, without gaining
+    // access to service reports or permission to edit customer master data.
+    function directoryReader(uid, feature, key) {
+      return signedIn() && request.auth.uid == uid && me().enabled == true
+        && (me().permissions.customers == true || me().permissions.quotations == true
+          || me().permissions.maintenance == true || me().permissions['service'] == true)
+        && ((feature == 'customers' && key == 'customers')
+          || (feature == 'service' && key == 'service_buildings'));
+    }
+    function validPermissions(p) {
+      return p is map && p.keys().hasOnly(['quotations','customers','products','maintenance','service','settings'])
+        && p.keys().hasAll(['quotations','customers','products','maintenance','service','settings'])
+        && p.quotations is bool && p.customers is bool && p.products is bool
+        && p.maintenance is bool && p['service'] is bool && p.settings is bool;
+    }
+    function featureForKey(key) {
+      return key in ['quotations','saved_quotations','showQty','showUnit','showAmount'] || key.matches('showModel.*') ? 'quotations'
+        : key == 'customers' ? 'customers'
+        : key in ['models','product_categories','category_makes'] ? 'products'
+        : key in ['maintenance_quotations','selected_maintenance_body_template'] || key.matches('m_.*') || key.matches('maintenance_.*') || key.matches('.*maintenance_dashboard_card.*') ? 'maintenance'
+        : key.matches('service_.*') ? 'service' : 'settings';
+    }
+    match /accounts/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || manages(uid));
+      allow list: if master() && resource.data.masterUid == request.auth.uid && resource.data.role == 'user';
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['email','role','masterUid','enabled','permissions','createdAt'])
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.role == 'user' && request.resource.data.enabled == true
+        && validPermissions(request.resource.data.permissions)
+        && get(/databases/$(database)/documents/invitations/$(request.auth.token.email.lower())).data.enabled == true
+        && request.resource.data.masterUid == get(/databases/$(database)/documents/invitations/$(request.auth.token.email.lower())).data.masterUid
+        && request.resource.data.permissions == get(/databases/$(database)/documents/invitations/$(request.auth.token.email.lower())).data.permissions
+        && get(/databases/$(database)/documents/accounts/$(request.resource.data.masterUid)).data.role == 'master'
+        && get(/databases/$(database)/documents/accounts/$(request.resource.data.masterUid)).data.enabled == true;
+      allow update: if master() && resource.data.role == 'user' && resource.data.masterUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['permissions','enabled','updatedAt'])
+        && request.resource.data.enabled is bool && validPermissions(request.resource.data.permissions);
+      allow delete: if false;
+      match /customerShares/{customerId} {
+        allow read: if (master() && request.auth.uid == uid)
+          || (signedIn() && me().enabled == true && me().role == 'user'
+            && me().masterUid == uid
+            && (me().permissions.customers == true || me().permissions.quotations == true
+              || me().permissions.maintenance == true || me().permissions['service'] == true)
+            && request.auth.token.email.lower() in resource.data.approvedEmails);
+        allow create, update: if master() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['customer','approvedEmails','updatedBy','updatedAt'])
+          && request.resource.data.customer is map
+          && request.resource.data.customer._ownerUid == uid
+          && request.resource.data.approvedEmails is list
+          && request.resource.data.updatedBy == request.auth.uid;
+        allow delete: if master() && request.auth.uid == uid;
+      }
+      match /data/{feature}/values/{key} {
+        allow read: if (feature in ['quotations','customers','products','maintenance','service','settings'] && allowed(uid, feature)) || directoryReader(uid, feature, key);
+        allow create, update: if allowed(uid, feature) && featureForKey(key) == feature
+          && !(key in ['login_username','login_password','biometric_enabled'])
+          && request.resource.data.keys().hasOnly(['revision','chunks','deleted','updatedAt','updatedBy'])
+          && request.resource.data.revision is int && request.resource.data.chunks is int
+          && request.resource.data.chunks >= 0 && request.resource.data.chunks <= 100
+          && request.resource.data.deleted is bool && request.resource.data.updatedBy == request.auth.uid
+          && ((!exists(/databases/$(database)/documents/accounts/$(uid)/data/$(feature)/values/$(key)) && request.resource.data.revision == 1)
+            || request.resource.data.revision == resource.data.revision + 1);
+        allow delete: if false;
+        match /chunks/{chunk} {
+          allow read: if allowed(uid, feature) || directoryReader(uid, feature, key);
+          allow create, update: if allowed(uid, feature) && featureForKey(key) == feature
+            && request.resource.data.keys().hasOnly(['payload']) && request.resource.data.payload is string
+            && request.resource.data.payload.size() <= 350000;
+          allow delete: if allowed(uid, feature) && featureForKey(key) == feature;
+        }
+      }
+    }
+    match /invitations/{email} {
+      allow get: if signedIn() && (request.auth.token.email.lower() == email || master() && resource.data.masterUid == request.auth.uid);
+      allow list: if master() && resource.data.masterUid == request.auth.uid;
+      allow create: if master() && request.resource.data.masterUid == request.auth.uid && email == email.lower()
+        && request.resource.data.email == email && request.resource.data.enabled is bool
+        && request.resource.data.keys().hasOnly(['email','masterUid','permissions','enabled','updatedAt'])
+        && validPermissions(request.resource.data.permissions);
+      allow update: if master() && resource.data.masterUid == request.auth.uid
+        && request.resource.data.masterUid == resource.data.masterUid && request.resource.data.email == email
+        && request.resource.data.keys().hasOnly(['email','masterUid','permissions','enabled','updatedAt'])
+        && request.resource.data.enabled is bool && validPermissions(request.resource.data.permissions);
+      allow delete: if master() && resource.data.masterUid == request.auth.uid;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

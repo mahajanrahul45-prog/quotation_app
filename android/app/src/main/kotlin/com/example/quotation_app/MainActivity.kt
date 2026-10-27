@@ -1,5 +1,6 @@
-package com.example.quotation_app
+package com.example.elevator_quotation_app
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+}

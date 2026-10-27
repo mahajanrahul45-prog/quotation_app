@@ -33,6 +33,10 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <div id="startup" role="status" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font:16px sans-serif;color:#16324F;background:#F3F6FA;text-align:center;padding:24px">
+    <p id="startup-status">Opening app...</p>
+    <button id="startup-retry" hidden type="button">Try again</button>
+  </div>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

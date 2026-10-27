@@ -1,0 +1,41 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "elevatorquotationapp",
+          "appId": "1:812581723084:android:dd92519faa64a235ff5b69",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "elevatorquotationapp",
+          "configurations": {
+            "android": "1:812581723084:android:dd92519faa64a235ff5b69",
+            "ios": "1:812581723084:ios:96bd2ea7f8e65988ff5b69",
+            "macos": "1:812581723084:ios:96bd2ea7f8e65988ff5b69",
+            "web": "1:812581723084:web:9dad28253a1026fbff5b69",
+            "windows": "1:812581723084:web:d40207761849d5ccff5b69"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

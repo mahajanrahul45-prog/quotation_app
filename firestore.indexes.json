@@ -1,0 +1,1 @@
+{"indexes":[{"collectionGroup":"accounts","queryScope":"COLLECTION","fields":[{"fieldPath":"masterUid","order":"ASCENDING"},{"fieldPath":"role","order":"ASCENDING"}]}],"fieldOverrides":[]}

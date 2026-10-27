@@ -1,3 +1,6 @@
+import '../auth/account_session.dart';
+import '../widgets/access_denied.dart';
+import '../widgets/app_scaffold.dart';
 // lib/pages/won_cases_page.dart
 import 'package:flutter/material.dart';
 
@@ -32,10 +35,9 @@ class _WonCasesPageState extends State<WonCasesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Won Cases'),
-      ),
+    if (!AccountSession.instance.can('quotations')) return const AccessDenied();
+    return AppScaffold(
+      appBar: AppBar(title: const Text('Won Cases')),
       body: _wonQuotations.isEmpty
           ? const Center(child: Text('No Won cases found.'))
           : ListView.builder(

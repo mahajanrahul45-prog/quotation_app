@@ -1,0 +1,6 @@
+﻿Tool: built-in image generation/edit tool
+Source: assets/icon/app_icon.png (original backed up in output/app_icon_original.png)
+Selected image: assets/icon/app_icon.png
+
+Prompt:
+Edit the provided app logo, changing ONLY its colours. Preserve the exact existing gear silhouette, teeth, split outer gear, central annulus, white gaps, central white opening, proportions, orientation and white square background. Replace every lime-green region with professional saturated teal #087F8C. Recolour dark blue outer segments to deep navy #16324F. Recolour the blue inner ring segment to muted medium blue #245E83. Keep the logo flat, crisp and clean, subtle existing shading at most. No text, no new objects, no cloud symbol, no border, no shadows, no mockup, no redesign. Output a square high-resolution raster app icon, keeping its original padding and geometry.
