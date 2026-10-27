@@ -57,7 +57,7 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
   }
 
   Future<void> _deleteCustomer(int index) async {
-    if (!CustomerDirectory.ownsCustomer(_filtered[index])) return;
+    if (!CustomerDirectory.canManageCustomer(_filtered[index])) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -78,12 +78,18 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
     );
 
     if (confirm != true) return;
+    final isOwn = CustomerDirectory.ownsCustomer(_filtered[index]);
     try {
-      await CustomerDirectory.revokeDeletedCustomer(_filtered[index]);
+      final customer = _filtered[index];
+      if (CustomerDirectory.ownsCustomer(customer)) {
+        await CustomerDirectory.revokeDeletedCustomer(customer);
+      } else {
+        await CustomerDirectory.changeManagedCustomerOnline(customer);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not revoke customer access: $e')),
+        SnackBar(content: Text('Could not delete customer. Check your connection and refresh: $e')),
       );
       return;
     }
@@ -94,7 +100,7 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
       _all.remove(removed);
     });
 
-    await _saveCustomersToPrefs(_all);
+    if (isOwn) await _saveCustomersToPrefs(_all);
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -104,7 +110,7 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
 
   Future<void> _editCustomer(int index) async {
     final customer = _filtered[index];
-    if (!CustomerDirectory.ownsCustomer(customer)) return;
+    if (!CustomerDirectory.canManageCustomer(customer)) return;
 
     final nameCtrl = TextEditingController(text: customer['customerName']);
     final partyCtrl = TextEditingController(text: customer['partyName']);
@@ -203,16 +209,25 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
                 'state': stateCtrl.text.trim(),
               };
 
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                if (CustomerDirectory.ownsCustomer(customer)) {
+                  final next = List<Map<String, dynamic>>.of(_all);
+                  next[next.indexOf(customer)] = updated;
+                  await _saveCustomersToPrefs(next);
+                } else {
+                  await CustomerDirectory.changeManagedCustomerOnline(customer, updated: updated);
+                }
+              } catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text('Could not update customer. Check your connection and refresh: $e')));
+                return;
+              }
+              if (!mounted) return;
               setState(() {
                 _all[_all.indexOf(customer)] = updated;
                 _filtered[index] = updated;
               });
-
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-
-              await _saveCustomersToPrefs(_all);
-
               navigator.pop();
               messenger.showSnackBar(
                 const SnackBar(content: Text('Customer updated')),
@@ -313,7 +328,7 @@ class _CustomersListViewPageState extends State<CustomersListViewPage> {
                         ),
 
                         // ✅ EDIT + DELETE BUTTONS
-                        trailing: !CustomerDirectory.ownsCustomer(c)
+                        trailing: !CustomerDirectory.canManageCustomer(c)
                             ? const Icon(Icons.business)
                             : Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -456,22 +471,39 @@ class _CustomersPageState extends State<CustomersPage> {
 
   // Delete a customer
   Future<void> _deleteCustomer(int index) async {
-    if (!CustomerDirectory.ownsCustomer(_customers[index])) return;
+    if (!CustomerDirectory.canManageCustomer(_customers[index])) return;
+    final customer = _customers[index];
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text('Delete this customer? Existing quotations will remain unchanged.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
-      await CustomerDirectory.revokeDeletedCustomer(_customers[index]);
+      if (!CustomerDirectory.ownsCustomer(customer)) {
+        await CustomerDirectory.changeManagedCustomerOnline(customer);
+        await _loadCustomers();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer deleted')));
+        return;
+      }
+      await CustomerDirectory.revokeDeletedCustomer(customer);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not revoke customer access: $e')),
+        SnackBar(content: Text('Could not delete customer. Check your connection and refresh: $e')),
       );
       return;
     }
     final prefs = await CloudPreferences.getInstance();
     final stored = prefs.getStringList('customers') ?? <String>[];
-    if (index < 0 || index >= stored.length) return;
-
-    stored.removeAt(index);
-    await prefs.setStringList('customers', stored);
+    final remaining = CustomerDirectory.changeManagedCustomer(stored, customer, null);
+    await prefs.setStringList('customers', remaining.cast<String>());
 
     if (!mounted) return;
     setState(() {
@@ -486,7 +518,7 @@ class _CustomersPageState extends State<CustomersPage> {
   // Edit existing customer
   Future<void> _editCustomer(int index) async {
     final existing = _customers[index];
-    if (!CustomerDirectory.ownsCustomer(existing)) return;
+    if (!CustomerDirectory.canManageCustomer(existing)) return;
     final editCustomerName = TextEditingController(
       text: existing['customerName'],
     );
@@ -574,10 +606,6 @@ class _CustomersPageState extends State<CustomersPage> {
             onPressed: () async {
               if (!(formKey.currentState?.validate() ?? false)) return;
 
-              final prefs = await CloudPreferences.getInstance();
-
-              final stored = prefs.getStringList('customers') ?? <String>[];
-
               final updated = {
                 ...existing,
                 'customerName': editCustomerName.text.trim(),
@@ -589,9 +617,20 @@ class _CustomersPageState extends State<CustomersPage> {
                 'phone': editPhone.text.trim(),
               };
 
-              stored[index] = jsonEncode(updated);
-              await prefs.setStringList('customers', stored);
-
+              try {
+                if (CustomerDirectory.ownsCustomer(existing)) {
+                  final prefs = await CloudPreferences.getInstance();
+                  final stored = prefs.getStringList('customers') ?? <String>[];
+                  // Combined lists contain records from multiple sources; never use the UI index as a storage index.
+                  final matches = CustomerDirectory.changeManagedCustomer(stored, existing, updated);
+                  await prefs.setStringList('customers', matches.cast<String>());
+                } else {
+                  await CustomerDirectory.changeManagedCustomerOnline(existing, updated: updated);
+                }
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not update customer. Check your connection and refresh: $e')));
+                return;
+              }
               if (!mounted) return;
               await _loadCustomers();
               if (!mounted) return;
@@ -1039,7 +1078,7 @@ class _CustomersPageState extends State<CustomersPage> {
                           ],
                         ),
 
-                        trailing: !CustomerDirectory.ownsCustomer(c)
+                        trailing: !CustomerDirectory.canManageCustomer(c)
                             ? const Icon(Icons.business_outlined)
                             : Row(
                                 mainAxisSize: MainAxisSize.min,

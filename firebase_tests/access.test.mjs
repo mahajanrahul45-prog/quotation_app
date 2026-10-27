@@ -136,3 +136,22 @@ test('Only master can approve and only selected invited users can read shared cu
   await assertSucceeds(updateDoc(doc(db('master'),path),{approvedEmails:[]}));
   await assertFails(getDoc(doc(db('alice'),path)));
 });
+
+test('Only owning master can update managed customer payload and revision', async () => {
+  const path = 'accounts/alice/data/customers/values/customers';
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), path), {...metadata, revision: 1});
+    await setDoc(doc(ctx.firestore(), `${path}/chunks/1_0`), {payload: 'old'});
+  });
+  for (const actor of ['bob', 'other-master']) {
+    await assertFails(setDoc(doc(db(actor), path), {...metadata, revision: 2, updatedBy: actor}));
+    await assertFails(setDoc(doc(db(actor), `${path}/chunks/2_0`), {payload: 'changed'}));
+    await assertFails(deleteDoc(doc(db(actor), `${path}/chunks/1_0`)));
+  }
+  const masterDb = db('master');
+  const batch = writeBatch(masterDb);
+  batch.set(doc(masterDb, path), {...metadata, revision: 2, updatedBy: 'master'});
+  batch.set(doc(masterDb, `${path}/chunks/2_0`), {payload: 'changed'});
+  batch.delete(doc(masterDb, `${path}/chunks/1_0`));
+  await assertSucceeds(batch.commit());
+});
